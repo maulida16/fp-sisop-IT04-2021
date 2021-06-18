@@ -13,9 +13,9 @@
 char *kepala[] = {"CREATE", "USE", "GRANT", "DROP", "INSERT", "UPDATE", "DELETE", "SELECT", "WHERE"};
 char *path[] = {"dir_server", "databases", "root"};
 char gudang[16][64];
-char db_session[MAXCHAR/4];
+char db_session[MAXCHAR/4] = {0};
 
-int file_created = 0;
+int file_created = 0, admin = 0;
 char session[8][64];
 char *trade, kosongan[512];
 
@@ -93,27 +93,23 @@ int main(int argc, char const *argv[])
                 while (session_token != NULL)
                 {
                     strcpy(session[tok], session_token);
-                    printf("%d. session: %s\n", tok, session[tok]);
+                    // printf("%d. session: %s\n", tok, session[tok]);
                     session_token = strtok(NULL, "\t");
                     tok++;
                 }
-                printf("[SERVER] session: %s|||%s\n", session[2], session[1]);
+                // printf("[SERVER] session: %s|||%s\n", session[2], session[1]);
                 // int login = ;
-                printf("LOGIN\n");
                 // if (create_user(session[1], session[2], 1) != 1) strcpy(session[0], "0");
             }
             while (1)
             {
-                printf("LOGIN\n");
                 if (status < 2)
                 {
-                printf("LOGIN\n");
                     if (create_user(session[1], session[2], 1) == 0)
                     {
-                        printf(">>LOGIN\n");
-                        // memset(session, 0, sizeof(session));
-                        // strcpy(session[0], "0");
-                        // strcpy(session[1], "0");
+                        memset(session, 0, sizeof(session));
+                        strcpy(session[0], "0");
+                        strcpy(session[1], "0");
                         printf("[SERVER] client %d login error\n", new_socket);
                         send(new_socket, reply2[1], sizeof(reply2[1]), 0);
                         close(new_socket);
@@ -124,7 +120,8 @@ int main(int argc, char const *argv[])
                     {
                         send(new_socket, reply2[0], sizeof(reply2[0]), 0);
                         status = 2;
-                        printf("[SERVER] SESSION: %s\n", session[0]);
+                        if (!strcmp(session[1], "root")) admin = 1;
+                        printf("[SERVER] SESSION <%d>: %s\n", admin, session[0]);
                     }
                 }
                 printf("[SERVER] LISTENING: %d\n\n", listening);
@@ -159,11 +156,11 @@ int main(int argc, char const *argv[])
                     {
                         
                         strcpy(gudang[i], token);
-                        printf("TOKEN: %s -> %s\n", token, gudang[i]);
+                        // printf("TOKEN: %s -> %s\n", token, gudang[i]);
                         // printf("token: %s\nstring now: %s\ngudang[%d]: %s\n", token, buffer, i, gudang[i]);
                         token = strtok(NULL, " ");
                         i++;
-                        printf("---%d\n", i);
+                        // printf("---%d\n", i);
                     }
                     memset(buffer, 0, sizeof(buffer));
                     //sytax list
@@ -193,8 +190,21 @@ int main(int argc, char const *argv[])
                         else if (!strcmp(gudang[1], "TABLE"))
                         {
                             printf("[%s]\n", gudang[1]);
-
+                            
+                            int n = 0;
+                            while(gudang[n] != ";" || gudang[n] != NULL){
+                                printf("STRCHR: \n", strchr(gudang[n], "("))
+                                printf("Gudang %d: %s\n", n, gudang[n]);
+                                n++;
+                            }
                             printf("INPUT: %s\n", gudang[2]);
+                            // if (db_session != "0"){
+                            //     // while (buffer[strlen(buffer)-1] != ';')
+                            //     sprintf(kalem, "%s|%s")
+                            //     printf("CREATE TABLE [%s]", table_maker(db_session, kalem) ? "SUCCESS" : "FAILED");
+
+                            // }
+                            // else continue;
                             // printf("CREATE TABLE [%s]\n", create_database(gudang[2], login) ? "SUCCESS" : "FAILED");
                         }
                         else
@@ -202,10 +212,23 @@ int main(int argc, char const *argv[])
                     }
                     else if (strcmp(gudang[0], kepala[1]) == 0)
                     {
-
+                        int nemu = 0;
                         printf("[%s] COMMAND\n", kepala[1]);
                         //USE DATABASE [db] -> use db path, save on session?
-                        printf("INPUT: %s\n", gudang[2]);
+                        // printf("INPUT: %s\n", gudang[2]);
+                        nemu = grant_user(gudang[2], session[1], 0);
+                            printf("NEMU [%d]\n", nemu);
+                        // printf("USE DATABASE [%s]\n", nemu ? "SUCCESS" : "FAILED");
+                        if (nemu){
+                            strcpy(db_session, gudang[2]);
+                            printf("USE DATABASE [%s]\n", db_session);
+                        }
+                        else {
+                            strcpy(db_session, "0");
+                            // printf("USE DATABASE [%s]\n", "2222");
+                            continue;
+                        }
+                        printf("[SERVER] SESSION DB: %s\n", db_session);
                     }
                     else if (strcmp(gudang[0], kepala[2]) == 0)
                     {
@@ -213,7 +236,7 @@ int main(int argc, char const *argv[])
                         printf("[%s] COMMAND\n", kepala[2]);
                         //GRANT PERMISSION [db] INTO [user] -> grating permission into a user
                         printf("INPUT: %s\n", gudang[1]);
-                        printf("GRANT PERMISSION [%s]\n", grant_user(gudang[2], gudang[4]) ? "SUCCESS" : "FAILED");
+                        printf("GRANT PERMISSION [%s]\n", grant_user(gudang[2], gudang[4], 1) ? "SUCCESS" : "FAILED");
                     }
                     else if (strcmp(gudang[0], kepala[3]) == 0)
                     {
@@ -362,7 +385,7 @@ int create_user(char *username, char *password, int mode)
     {
         char baskom[MAXCHAR / 2];
         sprintf(baskom, "%s\t%s\n", username, password);
-        printf("BASKOM: %s\n", baskom);
+        // printf("BASKOM: %s\n", baskom);
         // fprintf(target, "%s\n", baskom);
         printf("WADAH: %s\n", wadah);
         return (file_reader(wadah, baskom, 0) > 0) ? 1 : 0;
@@ -422,20 +445,44 @@ int initialization()
     return 1;
 }
 
-int grant_user(char *dabase, char *username)
+int table_maker(char *name, char *kolom)
 {
 
+    char wadah[MAXCHAR], PATHWAY[MAXCHAR];
+    char *mulai;
+    sprintf(PATHWAY, "%s/%s/%s", path[0], path[1], db_session);
+    FILE *target;
+
+    sprintf(wadah, "%s/%s", PATHWAY, name);
+
+    target = fopen(wadah, "r");
+
+    if (!target)
+    {
+        target = fopen(wadah, "a+");
+        fputs(kolom, target);
+        printf("CREATING TABLE [%s]\n", wadah);
+    }
+
+    fclose(target);
+ 
+    return 1;
+}
+
+int grant_user(char *dabase, char *username, int mode)
+{
+    //mode 0 = check only, mode 1 = create/write
     // char *FILES= "dir_server/databases/root/access.tsv";
     int credentials_i, access_i, access_a;
     char wadah[MAXCHAR];
     char PATHWAY[MAXCHAR];
     char access_tsv[MAXCHAR / 4];
+
     sprintf(PATHWAY, "%s/%s/%s", path[0], path[1], path[2]);
     sprintf(wadah, "%s/%s", PATHWAY, "credentials.tsv");
     printf("1. ----%s\n", wadah);
     credentials_i = file_reader(wadah, username, 1);
     printf("cred: %d\n", file_reader(wadah, username, 1));
-
 
     memset(wadah, 0, sizeof(wadah));
     sprintf(wadah, "%s/%s", PATHWAY, "access.tsv");
@@ -454,20 +501,29 @@ int grant_user(char *dabase, char *username)
     printf("%d <> %d\n", credentials_i, access_i);
     if (credentials_i != 1 || access_i != 0)
     {
+        if (mode == 0){
+            printf("ACCESS: %d\n", access_i);
+            return access_i;
+        }
+        else {
         printf("OR NOT FULFILLED\n");
         return 0;
+        }
     }
     else{
 
         // target_c = freopen(wadah, "a+", target_c);
-        printf("FD2: %s--%s\n", username, dabase);
-        fprintf(target_c, "%s\t%s\n", username, dabase);
+        if (mode == 1){
+        
+            printf("FD2: %s--%s\n", username, dabase);
+            fprintf(target_c, "%s\t%s\n", username, dabase);
+            // memset(wadah, 0, sizeof(wadah));
+            fclose(target_c);
+            printf("FD3: %s--%s\n", username, dabase);
+            return 1;
 
-        // memset(wadah, 0, sizeof(wadah));
-        fclose(target_c);
-        printf("FD3: %s--%s\n", username, dabase);
+        } else return 0;
 
-        return 1;
     }
 
 }
@@ -479,7 +535,7 @@ int create_database(char *db_name, char *user)
     sprintf(wadah, "%s/%s/%s", path[0], path[1], db_name);
     printf("WADAH: %s\n", wadah);
 
-    if (access(wadah, F_OK) < 0 && grant_user(db_name, user))
+    if (access(wadah, F_OK) < 0 && grant_user(db_name, user, 1))
         mkdir(wadah, 0777);
     else
         return 0;
