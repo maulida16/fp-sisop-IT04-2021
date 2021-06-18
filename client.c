@@ -71,6 +71,7 @@ int main(int argc, char const *argv[]) {
         else if (strlen(msg) > 0) {
 
             if (msg[strlen(msg)-1] != ';') {printf("[CLIENT] msg Incorrect [;]\n"); exit(0);};
+            msg[strlen(msg)-1] = '\0';
             send(sock , msg , strlen(msg) , 0 );
             printf("[CLIENT] Message sent!\n");
 
