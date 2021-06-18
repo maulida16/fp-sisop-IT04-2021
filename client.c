@@ -11,16 +11,21 @@ char* dynamicstring();
 int send_file();
 
 int main(int argc, char const *argv[]) {
+    
+    if (getuid() != 0 && !strcmp(argv[2], "root")) return 0;
     char credential[128];
     printf("[CLIENT] Welcome to our socket\n");
     sprintf(credential, "%s\t%s", argv[2], argv[4]);
     // printf("User pas: %s\n", credential);
+
+
     struct sockaddr_in address;
     int sock = 0, valread, count = 0;
     struct sockaddr_in serv_addr;
     char *msg;
     // char *hello = "Hello from client";
     char buffer[1024] = {0};
+    
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("\n[CLIENT] Socket creation error \n");
         return -1;
@@ -65,6 +70,7 @@ int main(int argc, char const *argv[]) {
 
         else if (strlen(msg) > 0) {
 
+            if (msg[strlen(msg)-1] != ';') {printf("[CLIENT] msg Incorrect [;]\n"); exit(0);};
             send(sock , msg , strlen(msg) , 0 );
             printf("[CLIENT] Message sent!\n");
 
